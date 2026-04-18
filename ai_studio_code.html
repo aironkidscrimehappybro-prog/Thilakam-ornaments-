@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thilakam Ornaments | Botanical Catalog</title>
+    
+    <!-- TALLWIND & FONTS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- REACT & LIBRARIES -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #fcfbf7; color: #1a1a1a; }
+        .terra-sage { color: #4a5d4e; }
+        .bg-terra-sage { background-color: #4a5d4e; }
+        .bg-terra-sidebar { background-color: #f7f5f0; }
+        .btn-primary { 
+            background-color: #4a5d4e; color: white; padding: 12px 24px; 
+            border-radius: 12px; font-weight: 700; transition: all 0.2s;
+        }
+        .btn-primary:hover { background-color: #3a4d3e; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDo0iR59B_DVX6xHtzqB6V1RdNWFeLDlz0",
+            authDomain: "ai-studio-applet-webapp-2ee57.firebaseapp.com",
+            projectId: "ai-studio-applet-webapp-2ee57",
+            firestoreDatabaseId: "ai-studio-6694c742-21a2-4b1c-9aa8-2ad78e1f96ad"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [products, setProducts] = useState([]);
+            const [view, setView] = useState('store');
+            const [cart, setCart] = useState([]);
+
+            // Listen for Auth
+            useEffect(() => {
+                return auth.onAuthStateChanged(u => setUser(u));
+            }, []);
+
+            // Fetch Products
+            useEffect(() => {
+                return db.collection('products').onSnapshot(snap => {
+                    const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setProducts(prods);
+                });
+            }, []);
+
+            const login = () => auth.signInWithPopup(googleProvider);
+            const logout = () => auth.signOut();
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    {/* SIDEBAR */}
+                    <aside className="w-full md:w-64 bg-terra-sidebar border-r p-8 flex flex-col">
+                        <h1 className="text-2xl font-black terra-sage mb-12 tracking-tighter">THILAKAM</h1>
+                        
+                        <nav className="flex-1 space-y-4">
+                            <button onClick={() => setView('store')} className={`w-full text-left p-3 rounded-xl ${view==='store' ? 'bg-white shadow' : ''}`}>
+                                📦 Marketplace
+                            </button>
+                            <button onClick={() => setView('wishlist')} className={`w-full text-left p-3 rounded-xl ${view==='wishlist' ? 'bg-white shadow' : ''}`}>
+                                ❤️ Wishlist
+                            </button>
+                            <button onClick={() => setView('cart')} className={`w-full text-left p-3 rounded-xl ${view==='cart' ? 'bg-white shadow' : ''}`}>
+                                🛒 Cart ({cart.length})
+                            </button>
+                        </nav>
+
+                        {user ? (
+                            <div className="mt-8 pt-8 border-t flex items-center gap-3">
+                                <img src={user.photoURL} className="w-8 h-8 rounded-full" />
+                                <button onClick={logout} className="text-xs font-bold text-red-500">Sign Out</button>
+                            </div>
+                        ) : (
+                            <button onClick={login} className="btn-primary mt-auto">Sign In</button>
+                        )}
+                    </aside>
+
+                    {/* MAIN CONTENT */}
+                    <main className="flex-1 p-8 md:p-12 overflow-y-auto">
+                        <header className="mb-12">
+                            <h2 className="text-4xl font-extrabold tracking-tight capitalize">{view}</h2>
+                            <p className="text-gray-500">Ethically sourced botanical ornaments.</p>
+                        </header>
+
+                        {view === 'store' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                {products.map(p => (
+                                    <div key={p.id} className="bg-white rounded-[24px] p-4 border transition-shadow hover:shadow-xl group">
+                                        <div className="aspect-square bg-gray-100 rounded-2xl mb-4 overflow-hidden">
+                                            <img src={p.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                        </div>
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h3 className="font-bold text-lg">{p.name}</h3>
+                                            <p className="font-black text-terra-sage">₹{p.price}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => setCart([...cart, p])}
+                                            className="w-full bg-terra-sidebar p-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                        >
+                                            Add to Cart
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {view === 'cart' && (
+                            <div className="max-w-xl mx-auto space-y-4">
+                                {cart.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between items-center bg-white p-4 rounded-xl border">
+                                        <p className="font-bold">{item.name}</p>
+                                        <p className="font-black">₹{item.price}</p>
+                                    </div>
+                                ))}
+                                {cart.length === 0 && <p className="text-center text-gray-400">Empty basket.</p>}
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
